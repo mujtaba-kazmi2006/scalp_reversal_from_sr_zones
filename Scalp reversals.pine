@@ -1,0 +1,45 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © responsibleSwift3o8h5
+
+//@version=6
+strategy("Scalp Reversal from S/R Zones", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+
+// ==== Parameters ====
+loss_percent = 1.0
+profit_percent = 1.0
+sr_lookback = input.int(20, "Support/Resistance Lookback", minval=5)
+reversal_type = input.string("Pin Bar", options=["Pin Bar", "Engulfing"], title="Reversal Type")
+
+// ==== Support/Resistance Detection ====
+isSupport = low == ta.lowest(low, sr_lookback)
+isResistance = high == ta.highest(high, sr_lookback)
+
+// ==== Reversal Pattern Detection ====
+bullishPinBar = close > open and (high - close) > 2 * (close - open)
+bearishPinBar = open > close and (high - open) > 2 * (open - close)
+
+bullishEngulfing = close[1] < open[1] and close > open and close > open[1] and open < close[1]
+bearishEngulfing = close[1] > open[1] and close < open and close < open[1] and open > close[1]
+
+isBullReversal = (reversal_type == "Pin Bar" and bullishPinBar) or (reversal_type == "Engulfing" and bullishEngulfing)
+isBearReversal = (reversal_type == "Pin Bar" and bearishPinBar) or (reversal_type == "Engulfing" and bearishEngulfing)
+
+// ==== Entry Logic ====
+longEntry = isSupport and isBullReversal
+shortEntry = isResistance and isBearReversal
+
+// ==== Risk Management ====
+long_sl = close * (1 - loss_percent / 100)
+long_tp = close * (1 + profit_percent / 100)
+
+short_sl = close * (1 + loss_percent / 100)
+short_tp = close * (1 - profit_percent / 100)
+
+// ==== Trade Execution ====
+if (longEntry)
+    strategy.entry("Long", strategy.long)
+    strategy.exit("TP/SL Long", from_entry="Long", stop=long_sl, limit=long_tp)
+
+if (shortEntry)
+    strategy.entry("Short", strategy.short)
+    strategy.exit("TP/SL Short", from_entry="Short", stop=short_sl, limit=short_tp)
